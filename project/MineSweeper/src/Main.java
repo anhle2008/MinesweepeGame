@@ -1,4 +1,9 @@
+
+
 import javax.swing.*;
+import game.MinesweeperGame;
+import gui.MinesweeperGUI;
+import utils.InputValidator;
 
 public class Main {
     private MinesweeperGame game;
@@ -9,6 +14,11 @@ public class Main {
     }
 
     private static void initializeAndStart() {
+        setLookAndFeel();
+        new Main().start();
+    }
+
+    private static void setLookAndFeel() {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
@@ -18,7 +28,6 @@ public class Main {
                 System.err.println("Error setting look and feel: " + ex.getMessage());
             }
         }
-        new Main().start();
     }
 
     public void start() {
@@ -27,37 +36,25 @@ public class Main {
     }
 
     private void showDifficultyDialog() {
-        String[] options = {"Beginner (8x8, 10 mines)", "Intermediate (12x12, 20 mines)", "Expert (16x16, 40 mines)", "Custom"};
-        int choice = JOptionPane.showOptionDialog(
-                null,
-                "Choose difficulty level:", "Minesweeper",
-                JOptionPane.DEFAULT_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                options,
-                options[0]
-        );
+        String[] options = {"Beginner (8x8, 10 mines)", "Intermediate (12x12, 20 mines)",
+                "Expert (16x16, 40 mines)", "Custom"};
+        int choice = JOptionPane.showOptionDialog(null, "Choose difficulty level:", "Minesweeper",
+                JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
 
         int rows, cols, mines;
 
         switch (choice) {
-            case 0:
-                rows = 8; cols = 8; mines = 10;
-                break;
-            case 1:
-                rows = 12; cols = 12; mines = 20;
-                break;
-            case 2:
-                rows = 16; cols = 16; mines = 40;
-                break;
+            case 0: rows = 8; cols = 8; mines = 10; break;
+            case 1: rows = 12; cols = 12; mines = 20; break;
+            case 2: rows = 16; cols = 16; mines = 40; break;
             case 3:
                 rows = getCustomValue("Enter number of rows (5-30):", 10, 5, 30);
                 cols = getCustomValue("Enter number of columns (5-30):", 10, 5, 30);
-                int maxMines = (rows * cols) / 3;
-                mines = getCustomValue("Enter number of mines (1-" + maxMines + "):", Math.min(20, maxMines), 1, maxMines);
+                int maxMines = InputValidator.getMaxMines(rows, cols);
+                mines = getCustomValue("Enter number of mines (1-" + maxMines + "):",
+                        Math.min(20, maxMines), 1, maxMines);
                 break;
-            default:
-                rows = 8; cols = 8; mines = 10;
+            default: rows = 8; cols = 8; mines = 10;
         }
 
         this.game = new MinesweeperGame(rows, cols, mines);
@@ -71,7 +68,7 @@ public class Main {
             }
             try {
                 int value = Integer.parseInt(input);
-                if (value >= min && value <= max) {
+                if (InputValidator.isValidCustomValue(value, min, max)) {
                     return value;
                 }
                 JOptionPane.showMessageDialog(null,
@@ -113,22 +110,13 @@ public class Main {
     private void handleCellReveal(int row, int col) {
         if (game.isGameOver()) return;
 
-        // Store current state for comparison
-        boolean wasGameOverBefore = game.isGameOver();
-
-        // Perform the reveal operation
-        boolean wasRevealed = game.revealCell(row, col);
-
-        if (wasRevealed) {
+        if (game.revealCell(row, col)) {
             gui.updateDisplay();
 
-            // Check if game over occurred (mine click)
-            if (game.isGameOver() && !game.isGameWon()) {
-                // Mine was clicked - show game over
-                gui.showGameOver(false, row, col);
-            } else if (game.isGameOver() && game.isGameWon()) {
-                // Game was won - show win message
-                gui.showGameOver(true, -1, -1);
+            if (game.isGameOver()) {
+                gui.showGameOver(game.isGameWon(),
+                        game.isGameWon() ? -1 : row,
+                        game.isGameWon() ? -1 : col);
             }
         }
     }
@@ -138,7 +126,6 @@ public class Main {
 
         if (game.toggleFlag(row, col)) {
             gui.updateDisplay();
-            // Check for win after flagging
             if (game.isGameOver() && game.isGameWon()) {
                 gui.showGameOver(true, -1, -1);
             }
@@ -148,11 +135,9 @@ public class Main {
     private void handleUndo() {
         if (game.undo()) {
             gui.updateDisplay();
-            // Only show "Move undone!" if the game is not over (not won)
             if (!game.isGameOver()) {
                 gui.showMessage("Move undone!");
-            } else if (game.isGameOver() && game.isGameWon()) {
-                // If we undid to a win state, show win message
+            } else if (game.isGameWon()) {
                 gui.showGameOver(true, -1, -1);
             }
         } else {
