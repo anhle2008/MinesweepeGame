@@ -209,7 +209,7 @@ public class MinesweeperGUI extends JFrame {
         button.setForeground(Color.BLACK);
 
         if (cell.isRevealed()) {
-            button.setEnabled(false);  // Disable revealed cells
+            //button.setEnabled(false);  // Disable revealed cells
             button.setBackground(GameConstants.REVEALED_COLOR);
             button.setBorder(BorderFactory.createLoweredBevelBorder());  // 3D sunken look
 
